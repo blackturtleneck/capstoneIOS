@@ -22,10 +22,31 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                     </view>
+                    <connections>
+                        <segue destination="d2x-Jk-Zgf" kind="show" identifier="LogInOnboardSegue" id="P2b-o9-YZZ"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="136.80000000000001" y="132.68365817091455"/>
+        </scene>
+        <!--Onboarding View Controller-->
+        <scene sceneID="DWM-xy-bnL">
+            <objects>
+                <viewController id="d2x-Jk-Zgf" customClass="OnboardingViewController" customModule="Capstone" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="StC-ln-nsD"/>
+                        <viewControllerLayoutGuide type="bottom" id="fsF-EW-fk2"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="G6J-QZ-Q6c">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="0b4-Pi-d6J" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="983" y="133"/>
         </scene>
     </scenes>
 </document>

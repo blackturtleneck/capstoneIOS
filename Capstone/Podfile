@@ -12,6 +12,7 @@ pod 'FBSDKLoginKit', '~> 4.10.0'
 pod 'FBSDKShareKit', '~> 4.10.0'
 pod ‘Firebase/Core’
 pod ‘Firebase/Auth’
+pod 'paper-onboarding'
 
 
   target 'CapstoneTests' do

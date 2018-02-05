@@ -38,10 +38,17 @@ class ViewController: UIViewController, FBSDKLoginButtonDelegate {
                 return
             }
             self.showEmailAddress()
+
         }
     }
     
     func loginButtonDidLogOut(_ loginButton: FBSDKLoginButton!) {
+        let firebaseAuth = Auth.auth()
+        do {
+            try firebaseAuth.signOut()
+        } catch let signOutError as NSError {
+            print ("Error signing out: %@", signOutError)
+        }
         print("Did log out of FB")
     }
     
@@ -52,6 +59,7 @@ class ViewController: UIViewController, FBSDKLoginButtonDelegate {
         }
         showEmailAddress()
         print("Successfully logged in with Facebook")
+        
     }
     
     func showEmailAddress() {
@@ -63,9 +71,8 @@ class ViewController: UIViewController, FBSDKLoginButtonDelegate {
                 return
             }
             print ("Successfully logged in with our user: ", user, "")
-        
+            self.performSegue(withIdentifier: "LogInOnboardSegue", sender: self)
         }
-        
         
         
         
@@ -76,6 +83,7 @@ class ViewController: UIViewController, FBSDKLoginButtonDelegate {
             }
             print(result)
         }
+        
     
     }
 

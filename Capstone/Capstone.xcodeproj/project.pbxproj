@@ -15,6 +15,7 @@
 		0105FEB120254425002AD6F5 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0105FEAF20254425002AD6F5 /* LaunchScreen.storyboard */; };
 		0105FEBC20254426002AD6F5 /* CapstoneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0105FEBB20254426002AD6F5 /* CapstoneTests.swift */; };
 		0105FEC720254426002AD6F5 /* CapstoneUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0105FEC620254426002AD6F5 /* CapstoneUITests.swift */; };
+		013685882028FE5600BCCD26 /* OnboardingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 013685872028FE5600BCCD26 /* OnboardingViewController.swift */; };
 		015FD3B32027C70600F84D19 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 015FD3B22027C70600F84D19 /* GoogleService-Info.plist */; };
 		835B633E8BCB27753828B28B /* Pods_CapstoneTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 373EBD32CBA713883FCD8F7B /* Pods_CapstoneTests.framework */; };
 		DA7A12AC4AB5837A564B471E /* Pods_CapstoneUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13FE04AB7EFF38A7834F81D2 /* Pods_CapstoneUITests.framework */; };
@@ -53,6 +54,7 @@
 		0105FEC220254426002AD6F5 /* CapstoneUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CapstoneUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0105FEC620254426002AD6F5 /* CapstoneUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneUITests.swift; sourceTree = "<group>"; };
 		0105FEC820254426002AD6F5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		013685872028FE5600BCCD26 /* OnboardingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewController.swift; sourceTree = "<group>"; };
 		015FD3AE2026895300F84D19 /* Capstone-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Capstone-Bridging-Header.h"; sourceTree = "<group>"; };
 		015FD3B12026B90B00F84D19 /* Capstone.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Capstone.entitlements; sourceTree = "<group>"; };
 		015FD3B22027C70600F84D19 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -124,6 +126,7 @@
 				0105FEA320254425002AD6F5 /* AppDelegate.swift */,
 				0105FEA520254425002AD6F5 /* ViewController.swift */,
 				0105FEA720254425002AD6F5 /* Main.storyboard */,
+				013685872028FE5600BCCD26 /* OnboardingViewController.swift */,
 				0105FEAD20254425002AD6F5 /* Assets.xcassets */,
 				0105FEAF20254425002AD6F5 /* LaunchScreen.storyboard */,
 				0105FEB220254425002AD6F5 /* Info.plist */,
@@ -407,6 +410,7 @@
 				"${BUILT_PRODUCTS_DIR}/GTMSessionFetcher/GTMSessionFetcher.framework",
 				"${BUILT_PRODUCTS_DIR}/GoogleToolboxForMac/GoogleToolboxForMac.framework",
 				"${BUILT_PRODUCTS_DIR}/nanopb/nanopb.framework",
+				"${BUILT_PRODUCTS_DIR}/paper-onboarding/paper_onboarding.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
@@ -417,6 +421,7 @@
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GTMSessionFetcher.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GoogleToolboxForMac.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/nanopb.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/paper_onboarding.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -493,6 +498,7 @@
 				0105FEA620254425002AD6F5 /* ViewController.swift in Sources */,
 				0105FEAC20254425002AD6F5 /* Capstone.xcdatamodeld in Sources */,
 				0105FEA420254425002AD6F5 /* AppDelegate.swift in Sources */,
+				013685882028FE5600BCCD26 /* OnboardingViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

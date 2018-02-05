@@ -46,6 +46,7 @@ PODS:
     - nanopb/encode (= 0.3.8)
   - nanopb/decode (0.3.8)
   - nanopb/encode (0.3.8)
+  - paper-onboarding (4.0.0)
 
 DEPENDENCIES:
   - FBSDKCoreKit (~> 4.10.0)
@@ -53,6 +54,7 @@ DEPENDENCIES:
   - FBSDKShareKit (~> 4.10.0)
   - Firebase/Auth
   - Firebase/Core
+  - paper-onboarding
 
 SPEC CHECKSUMS:
   Bolts: ac6567323eac61e203f6a9763667d0f711be34c8
@@ -67,7 +69,8 @@ SPEC CHECKSUMS:
   GoogleToolboxForMac: 2501e2ad72a52eb3dfe7bd9aee7dad11b858bd20
   GTMSessionFetcher: 5bb1eae636127de695590f50e7d248483eb891e6
   nanopb: 5601e6bca2dbf1ed831b519092ec110f66982ca3
+  paper-onboarding: f920d5dc86b439dea5fbe5e59cc5ec9cc1a904a4
 
-PODFILE CHECKSUM: 4b8d4dddbb829922c559182277ebed442aa4fd05
+PODFILE CHECKSUM: 87b2cba8fec1e976dc44bfbca485d6e852072cfe
 
 COCOAPODS: 1.4.0
