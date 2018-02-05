@@ -7,11 +7,11 @@ target 'Capstone' do
 
   # Pods for Capstone
 
-  target 'Capstone' do
-
 pod 'FBSDKCoreKit', '~> 4.10.0'
 pod 'FBSDKLoginKit', '~> 4.10.0'
 pod 'FBSDKShareKit', '~> 4.10.0'
+pod ‘Firebase/Core’
+pod ‘Firebase/Auth’
 
 
   target 'CapstoneTests' do

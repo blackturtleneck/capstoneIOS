@@ -62,11 +62,6 @@
 
   parameters[@"application_tracking_enabled"] = [@(!FBSDKSettings.limitEventAndDataUsage) stringValue];
 
-  NSString *userID = [FBSDKAppEvents userID];
-  if (userID) {
-    parameters[@"app_user_id"] = userID;
-  }
-
   [FBSDKAppEventsDeviceInfo extendDictionaryWithDeviceInfo:parameters];
 
   static dispatch_once_t fetchBundleOnce;
@@ -212,55 +207,30 @@
   [[NSNotificationCenter defaultCenter] postNotificationName:FBSDKAppEventsLoggingResultNotification object:error];
 }
 
-+ (BOOL)matchString:(NSString *)string
-  firstCharacterSet:(NSCharacterSet *)firstCharacterSet
-restOfStringCharacterSet:(NSCharacterSet *)restOfStringCharacterSet
-{
-  if (string.length == 0) {
-    return NO;
-  }
-  for (NSUInteger i = 0; i < string.length; i++) {
-    const unichar c = [string characterAtIndex:i];
-    if (i == 0) {
-      if (![firstCharacterSet characterIsMember:c]) {
-        return NO;
-      }
-    } else {
-      if (![restOfStringCharacterSet characterIsMember:c]) {
-        return NO;
-      }
-    }
-  }
-  return YES;
-}
-
 + (BOOL)regexValidateIdentifier:(NSString *)identifier
 {
-  static NSCharacterSet *firstCharacterSet;
-  static NSCharacterSet *restOfStringCharacterSet;
+  static NSRegularExpression *regex;
   static dispatch_once_t onceToken;
   static NSMutableSet *cachedIdentifiers;
   dispatch_once(&onceToken, ^{
-    NSMutableCharacterSet *mutableSet = [NSMutableCharacterSet alphanumericCharacterSet];
-    [mutableSet addCharactersInString:@"_"];
-    firstCharacterSet = [mutableSet copy];
-
-    [mutableSet addCharactersInString:@"- "];
-    restOfStringCharacterSet = [mutableSet copy];
+    NSString *regexString = @"^[0-9a-zA-Z_]+[0-9a-zA-Z _-]*$";
+    regex = [NSRegularExpression regularExpressionWithPattern:regexString
+                                                      options:0
+                                                        error:NULL];
     cachedIdentifiers = [[NSMutableSet alloc] init];
   });
 
   @synchronized(self) {
     if (![cachedIdentifiers containsObject:identifier]) {
-      if ([self matchString:identifier
-          firstCharacterSet:firstCharacterSet
-   restOfStringCharacterSet:restOfStringCharacterSet]) {
+      NSUInteger numMatches = [regex numberOfMatchesInString:identifier options:0 range:NSMakeRange(0, identifier.length)];
+      if (numMatches > 0) {
         [cachedIdentifiers addObject:identifier];
       } else {
         return NO;
       }
     }
   }
+
   return YES;
 }
 

@@ -8,6 +8,7 @@
 
 import UIKit
 import FBSDKLoginKit
+import Firebase
 
 class ViewController: UIViewController, FBSDKLoginButtonDelegate {
     override func viewDidLoad() {
@@ -16,10 +17,30 @@ class ViewController: UIViewController, FBSDKLoginButtonDelegate {
         
         // use constraints instead later
         loginButton.frame = CGRect(x: 16, y: 50, width: view.frame.width - 32, height:50 )
-        
         loginButton.delegate = self
+        loginButton.readPermissions = ["email", "public_profile"]
         
+        let customFBButton = UIButton(type:.system)
+        customFBButton.backgroundColor = .blue
+        customFBButton.frame = CGRect(x: 16, y: 116, width: view.frame.width - 32, height: 50)
+        customFBButton.setTitle("Custom FB Login here", for: .normal)
+        view.addSubview(customFBButton)
+        
+        customFBButton.addTarget(self, action: #selector(handleCustomFBLogin), for: .touchUpInside)
+    
     }
+    
+    @objc func handleCustomFBLogin() {
+        FBSDKLoginManager().logIn(withReadPermissions: ["email"], from: self) {
+            (result, err) in
+            if err != nil {
+                print("This login has failed", err)
+                return
+            }
+            self.showEmailAddress()
+        }
+    }
+    
     func loginButtonDidLogOut(_ loginButton: FBSDKLoginButton!) {
         print("Did log out of FB")
     }
@@ -29,7 +50,33 @@ class ViewController: UIViewController, FBSDKLoginButtonDelegate {
             print(error)
             return
         }
+        showEmailAddress()
         print("Successfully logged in with Facebook")
+    }
+    
+    func showEmailAddress() {
+     let credential = FacebookAuthProvider.credential(withAccessToken: FBSDKAccessToken.current().tokenString)
+        
+        Auth.auth().signIn(with: credential) { (user, error) in
+            if let error = error {
+                print ("Something went wrong with FB user: ", error)
+                return
+            }
+            print ("Successfully logged in with our user: ", user, "")
+        
+        }
+        
+        
+        
+        
+        FBSDKGraphRequest(graphPath: "/me", parameters: ["fields": "id, name, email"]).start{ (connection, result, err) in
+            if err != nil {
+                print ("Failed to start graph request!", err)
+                return
+            }
+            print(result)
+        }
+    
     }
 
     override func didReceiveMemoryWarning() {

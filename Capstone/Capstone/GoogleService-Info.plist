@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AD_UNIT_ID_FOR_BANNER_TEST</key>
+	<string>ca-app-pub-3940256099942544/2934735716</string>
+	<key>AD_UNIT_ID_FOR_INTERSTITIAL_TEST</key>
+	<string>ca-app-pub-3940256099942544/4411468910</string>
+	<key>CLIENT_ID</key>
+	<string>1087820836712-8og79oh9apboecje458rp6l5qp7pul8l.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.1087820836712-8og79oh9apboecje458rp6l5qp7pul8l</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCrqJRyNJHlWfrV8fCotyDFSTGVok1F-Yo</string>
+	<key>GCM_SENDER_ID</key>
+	<string>1087820836712</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>github.com-blackturtleneck.Capstone</string>
+	<key>PROJECT_ID</key>
+	<string>capstone-62b7b</string>
+	<key>STORAGE_BUCKET</key>
+	<string>capstone-62b7b.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<true></true>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<false></false>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:1087820836712:ios:b95356dc9742076e</string>
+	<key>DATABASE_URL</key>
+	<string>https://capstone-62b7b.firebaseio.com</string>
+</dict>
+</plist>

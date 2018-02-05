@@ -32,24 +32,14 @@
 
 static int const FBClientStateChallengeLength = 20;
 static NSString *const FBSDKExpectedChallengeKey = @"expected_login_challenge";
-static NSString *const FBSDKOauthPath = @"/dialog/oauth";
-static NSString *const SFVCCanceledLogin = @"com.apple.SafariServices.Authentication";
-
-typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
-  FBSDKLoginManagerStateIdle,
-  // We received a call to start login.
-  FBSDKLoginManagerStateStart,
-  // We're calling out to the Facebook app or Safari to perform a log in
-  FBSDKLoginManagerStatePerformingLogin,
-};
 
 @implementation FBSDKLoginManager
 {
   FBSDKLoginManagerRequestTokenHandler _handler;
   FBSDKLoginManagerLogger *_logger;
-  FBSDKLoginManagerState _state;
+  // YES if we're calling out to the Facebook app or Safari to perform a log in
+  BOOL _performingLogIn;
   FBSDKKeychainStore *_keychainStore;
-  BOOL _usedSFAuthSession;
 }
 
 + (void)initialize
@@ -80,15 +70,13 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
               fromViewController:(UIViewController *)fromViewController
                          handler:(FBSDKLoginManagerRequestTokenHandler)handler
 {
-  if (![self validateLoginStartState]) {
-    return;
-  }
   [self assertPermissions:permissions];
   NSSet *permissionSet = [NSSet setWithArray:permissions];
   if (![FBSDKInternalUtility areAllPermissionsReadPermissions:permissionSet]) {
-    [self raiseLoginException:[NSException exceptionWithName:NSInvalidArgumentException
-                                                      reason:@"Publish or manage permissions are not permitted to be requested with read permissions."
-                                                    userInfo:nil]];
+    [[NSException exceptionWithName:NSInvalidArgumentException
+                             reason:@"Publish or manage permissions are not permitted to be requested with read permissions."
+                           userInfo:nil]
+     raise];
   }
   self.fromViewController = fromViewController;
   [self logInWithPermissions:permissionSet handler:handler];
@@ -105,15 +93,13 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
                  fromViewController:(UIViewController *)fromViewController
                             handler:(FBSDKLoginManagerRequestTokenHandler)handler
 {
-  if (![self validateLoginStartState]) {
-    return;
-  }
   [self assertPermissions:permissions];
   NSSet *permissionSet = [NSSet setWithArray:permissions];
   if (![FBSDKInternalUtility areAllPermissionsPublishPermissions:permissionSet]) {
-    [self raiseLoginException:[NSException exceptionWithName:NSInvalidArgumentException
-                                                      reason:@"Read permissions are not permitted to be requested with publish or manage permissions."
-                                                    userInfo:nil]];
+    [[NSException exceptionWithName:NSInvalidArgumentException
+                             reason:@"Read permissions are not permitted to be requested with publish or manage permissions."
+                           userInfo:nil]
+     raise];
   }
   self.fromViewController = fromViewController;
   [self logInWithPermissions:permissionSet handler:handler];
@@ -140,75 +126,26 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
 
 #pragma mark - Private
 
-- (void)raiseLoginException:(NSException *)exception
-{
-  _state = FBSDKLoginManagerStateIdle;
-  [exception raise];
-}
-
-- (void)handleImplicitCancelOfLogIn
-{
-  FBSDKLoginManagerLoginResult *result = [[FBSDKLoginManagerLoginResult alloc] initWithToken:nil
-                                                                                 isCancelled:YES
-                                                                          grantedPermissions:nil
-                                                                         declinedPermissions:nil];
-  [result addLoggingExtra:@YES forKey:@"implicit_cancel"];
-  [self invokeHandler:result error:nil];
-}
-
-- (BOOL)validateLoginStartState
-{
-  switch (_state) {
-    case FBSDKLoginManagerStateStart: {
-      if (self->_usedSFAuthSession) {
-        // Using SFAuthenticationSession makes an interestitial dialog that blocks the app, but in certain situations such as
-        // screen lock it can be dismissed and have the control returned to the app without invoking the completionHandler.
-        // In this case, the viewcontroller has the control back and tried to reinvoke the login. This is acceptable behavior
-        // and we should pop up the dialog again
-        return YES;
-      }
-
-      NSString *errorStr = @"** WARNING: You are trying to start a login while a previous login has not finished yet."
-      "This is unsupported behavior. You should wait until the previous login handler gets called to start a new login.";
-      [FBSDKLogger singleShotLogEntry:FBSDKLoggingBehaviorDeveloperErrors
-                         formatString:@"%@", errorStr];
-      return NO;
-    }
-    case FBSDKLoginManagerStatePerformingLogin:{
-      [self handleImplicitCancelOfLogIn];
-      return YES;
-    }
-    case FBSDKLoginManagerStateIdle:
-      _state = FBSDKLoginManagerStateStart;
-      return YES;
-  }
-}
-
-- (BOOL)isPerformingLogin
-{
-  return _state == FBSDKLoginManagerStatePerformingLogin;
-}
-
 - (void)assertPermissions:(NSArray *)permissions
 {
   for (NSString *permission in permissions) {
     if (![permission isKindOfClass:[NSString class]]) {
-      [self raiseLoginException:[NSException exceptionWithName:NSInvalidArgumentException
-                                                         reason:@"Permissions must be string values."
-                                                       userInfo:nil]];
+      [[NSException exceptionWithName:NSInvalidArgumentException
+                               reason:@"Permissions must be string values."
+                             userInfo:nil]
+       raise];
     }
     if ([permission rangeOfString:@","].location != NSNotFound) {
-      [self raiseLoginException:[NSException exceptionWithName:NSInvalidArgumentException
-                                                        reason:@"Permissions should each be specified in separate string values in the array."
-                                                      userInfo:nil]];
+      [[NSException exceptionWithName:NSInvalidArgumentException
+                               reason:@"Permissions should each be specified in separate string values in the array."
+                             userInfo:nil]
+       raise];
     }
   }
 }
 
 - (void)completeAuthentication:(FBSDKLoginCompletionParameters *)parameters expectChallenge:(BOOL)expectChallenge
 {
-  NSSet *recentlyGrantedPermissions = nil;
-  NSSet *recentlyDeclinedPermissions = nil;
   FBSDKLoginManagerLoginResult *result = nil;
   NSError *error = parameters.error;
 
@@ -236,6 +173,9 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
     if (!cancelled) {
       NSSet *grantedPermissions = parameters.permissions;
       NSSet *declinedPermissions = parameters.declinedPermissions;
+
+      NSSet *recentlyGrantedPermissions = nil;
+      NSSet *recentlyDeclinedPermissions = nil;
 
       [self determineRecentlyGrantedPermissions:&recentlyGrantedPermissions
                     recentlyDeclinedPermissions:&recentlyDeclinedPermissions
@@ -267,18 +207,13 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
 
     if (cancelled) {
       NSSet *declinedPermissions = nil;
-      if ([FBSDKAccessToken currentAccessToken] != nil) {
-        if (parameters.isSystemAccount) {
-          // If a System Account reauthorization was cancelled by the user tapping Don't Allow
-          // then add the declined permissions to the login result. The Accounts framework
-          // doesn't register the decline with Facebook, which is why we don't update the
-          // access token.
-          declinedPermissions = parameters.declinedPermissions;
-        } else {
-          // Always include the list of declined permissions from this login request
-          // if an access token is already cached by the SDK
-          declinedPermissions = recentlyDeclinedPermissions;
-        }
+
+      // If a System Account reauthorization was cancelled by the user tapping Don't Allow
+      // then add the declined permissions to the login result. The Accounts framework
+      // doesn't register the decline with Facebook, which is why we don't update the
+      // access token.
+      if ([FBSDKAccessToken currentAccessToken] != nil && parameters.isSystemAccount) {
+        declinedPermissions = parameters.declinedPermissions;
       }
 
       result = [[FBSDKLoginManagerLoginResult alloc] initWithToken:nil
@@ -328,7 +263,6 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
   [_logger endLoginWithResult:result error:error];
   [_logger endSession];
   _logger = nil;
-  _state = FBSDKLoginManagerStateIdle;
 
   if (_handler) {
     FBSDKLoginManagerRequestTokenHandler handler = _handler;
@@ -349,7 +283,7 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
   return [_keychainStore stringForKey:FBSDKExpectedChallengeKey];
 }
 
-- (NSDictionary *)logInParametersWithPermissions:(NSSet *)permissions serverConfiguration:(FBSDKServerConfiguration *)serverConfiguration
+- (NSDictionary *)logInParametersWithPermissions:(NSSet *)permissions
 {
   [FBSDKInternalUtility validateURLSchemes];
 
@@ -362,9 +296,9 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
   loginParams[@"return_scopes"] = @"true";
   loginParams[@"sdk_version"] = FBSDK_VERSION_STRING;
   loginParams[@"fbapp_pres"] = @([FBSDKInternalUtility isFacebookAppInstalled]);
-  loginParams[@"auth_type"] = @"rerequest";
-  loginParams[@"logging_token"] = serverConfiguration.loggingToken;
-
+  if ([FBSDKAccessToken currentAccessToken]) {
+    loginParams[@"auth_type"] = @"rerequest";
+  }
   [FBSDKInternalUtility dictionary:loginParams setObject:[FBSDKSettings appURLSchemeSuffix] forKey:@"local_client_id"];
   [FBSDKInternalUtility dictionary:loginParams setObject:[FBSDKLoginUtility stringForAudience:self.defaultAudience] forKey:@"default_audience"];
   [FBSDKInternalUtility dictionary:loginParams setObject:[[permissions allObjects] componentsJoinedByString:@","] forKey:@"scope"];
@@ -380,8 +314,7 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
 
 - (void)logInWithPermissions:(NSSet *)permissions handler:(FBSDKLoginManagerRequestTokenHandler)handler
 {
-  FBSDKServerConfiguration *serverConfiguration = [FBSDKServerConfigurationManager cachedServerConfiguration];
-  _logger = [[FBSDKLoginManagerLogger alloc] initWithLoggingToken:serverConfiguration.loggingToken];
+  _logger = [[FBSDKLoginManagerLogger alloc] init];
 
   _handler = [handler copy];
   _requestedPermissions = permissions;
@@ -393,16 +326,12 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
 
 - (void)logInWithBehavior:(FBSDKLoginBehavior)loginBehavior
 {
-  FBSDKServerConfiguration *serverConfiguration = [FBSDKServerConfigurationManager cachedServerConfiguration];
-  NSDictionary *loginParams = [self logInParametersWithPermissions:_requestedPermissions serverConfiguration:serverConfiguration];
-  self->_usedSFAuthSession = NO;
+  NSDictionary *loginParams = [self logInParametersWithPermissions:_requestedPermissions];
 
   void(^completion)(BOOL, NSString *, NSError *) = ^void(BOOL didPerformLogIn, NSString *authMethod, NSError *error) {
     if (didPerformLogIn) {
       [_logger startAuthMethod:authMethod];
-      _state = FBSDKLoginManagerStatePerformingLogin;
-    } else if (error && [error.domain isEqualToString:SFVCCanceledLogin]) {
-      [self handleImplicitCancelOfLogIn];
+      _performingLogIn = YES;
     } else {
       if (!error) {
         error = [NSError errorWithDomain:FBSDKLoginErrorDomain code:FBSDKLoginUnknownErrorCode userInfo:nil];
@@ -414,40 +343,48 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
   switch (loginBehavior) {
     case FBSDKLoginBehaviorNative: {
       if ([FBSDKInternalUtility isFacebookAppInstalled]) {
-        BOOL useNativeDialog = [serverConfiguration useNativeDialogForDialogName:FBSDKDialogConfigurationNameLogin];
-        if (useNativeDialog) {
-          [self performNativeLogInWithParameters:loginParams handler:^(BOOL openedURL, NSError *openedURLError) {
-            if (openedURLError) {
-              [FBSDKLogger singleShotLogEntry:FBSDKLoggingBehaviorDeveloperErrors
-                                 formatString:@"FBSDKLoginBehaviorNative failed : %@\nTrying FBSDKLoginBehaviorBrowser", openedURLError];
-            }
-            if (openedURL) {
-              completion(YES, FBSDKLoginManagerLoggerAuthMethod_Native, openedURLError);
-            } else {
-              [self logInWithBehavior:FBSDKLoginBehaviorBrowser];
-            }
-          }];
-        } else {
-          [self logInWithBehavior:FBSDKLoginBehaviorBrowser];
-        }
+        [FBSDKServerConfigurationManager loadServerConfigurationWithCompletionBlock:^(FBSDKServerConfiguration *serverConfiguration, NSError *loadError) {
+          BOOL useNativeDialog = [serverConfiguration useNativeDialogForDialogName:FBSDKDialogConfigurationNameLogin];
+          if (useNativeDialog && loadError == nil) {
+            [self performNativeLogInWithParameters:loginParams handler:^(BOOL openedURL, NSError *openedURLError) {
+              if (openedURLError) {
+                [FBSDKLogger singleShotLogEntry:FBSDKLoggingBehaviorDeveloperErrors
+                                   formatString:@"FBSDKLoginBehaviorNative failed : %@\nTrying FBSDKLoginBehaviorBrowser", openedURLError];
+              }
+              if (openedURL) {
+                completion(YES, FBSDKLoginManagerLoggerAuthMethod_Native, openedURLError);
+              } else {
+                [self logInWithBehavior:FBSDKLoginBehaviorBrowser];
+              }
+            }];
+          } else {
+            [self logInWithBehavior:FBSDKLoginBehaviorBrowser];
+          }
+        }];
         break;
       }
-      // Intentional fall through. Switching to browser login instead.
+      // intentional fall through.
     }
     case FBSDKLoginBehaviorBrowser: {
       [self performBrowserLogInWithParameters:loginParams handler:^(BOOL openedURL,
                                                                     NSString *authMethod,
                                                                     NSError *openedURLError) {
-        completion(openedURL, authMethod, openedURLError);
+        if (openedURL) {
+          completion(YES, authMethod, openedURLError);
+        } else {
+          completion(NO, authMethod, openedURLError);
+        }
       }];
       break;
     }
     case FBSDKLoginBehaviorSystemAccount: {
-      if (serverConfiguration.isSystemAuthenticationEnabled) {
-        [self beginSystemLogIn];
-      } else {
-        [self logInWithBehavior:FBSDKLoginBehaviorNative];
-      }
+      [FBSDKServerConfigurationManager loadServerConfigurationWithCompletionBlock:^(FBSDKServerConfiguration *serverConfiguration, NSError *loadError) {
+        if (serverConfiguration.isSystemAuthenticationEnabled && loadError == nil) {
+          [self beginSystemLogIn];
+        } else {
+          [self logInWithBehavior:FBSDKLoginBehaviorNative];
+        }
+      }];
       completion(YES, FBSDKLoginManagerLoggerAuthMethod_System, nil);
       break;
     }
@@ -522,11 +459,9 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
   NSError *error;
   NSURL *authURL = [FBSDKInternalUtility URLWithScheme:scheme host:@"authorize" path:@"" queryParameters:mutableParams error:&error];
 
-  NSDate *start = [NSDate date];
-  [[FBSDKApplicationDelegate sharedInstance] openURL:authURL sender:self handler:^(BOOL openedURL, NSError *anError) {
-    [_logger logNativeAppDialogResult:openedURL dialogDuration:-[start timeIntervalSinceNow]];
+  [[FBSDKApplicationDelegate sharedInstance] openURL:authURL sender:self handler:^(BOOL openedURL) {
     if (handler) {
-      handler(openedURL, anError);
+      handler(openedURL, error);
     }
   }];
 }
@@ -552,20 +487,18 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
                            setObject:redirectURL
                               forKey:@"redirect_uri"];
     authURL = [FBSDKInternalUtility facebookURLWithHostPrefix:@"m."
-                                                         path:FBSDKOauthPath
+                                                         path:@"/dialog/oauth"
                                               queryParameters:browserParams
                                                         error:&error];
   }
   if (authURL) {
-    void(^handlerWrapper)(BOOL, NSError*) = ^(BOOL didOpen, NSError *anError) {
+    void(^handlerWrapper)(BOOL) = ^(BOOL didOpen) {
       if (handler) {
-        handler(didOpen, authMethod, anError);
+        handler(didOpen, authMethod, nil);
       }
     };
-
     if (useSafariViewController) {
-      // Note based on above, authURL must be a http scheme. If that changes, add a guard, otherwise SFVC can throw
-      self->_usedSFAuthSession = YES;
+        // Note based on above, authURL must be a http scheme. If that changes, add a guard, otherwise SFVC can throw
       [[FBSDKApplicationDelegate sharedInstance] openURLWithSafariViewController:authURL
                                                                           sender:self
                                                               fromViewController:self.fromViewController
@@ -583,13 +516,18 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
 
 - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation
 {
-  BOOL isFacebookURL = [self canOpenURL:url forApplication:application sourceApplication:sourceApplication annotation:annotation];
+  // verify the URL is intended as a callback for the SDK's log in
+  BOOL isFacebookURL = [[url scheme] hasPrefix:[NSString stringWithFormat:@"fb%@", [FBSDKSettings appID]]] &&
+    [[url host] isEqualToString:@"authorize"];
 
-  if (!isFacebookURL && [self isPerformingLogin]) {
+  BOOL isExpectedSourceApplication = [sourceApplication hasPrefix:@"com.facebook"] || [sourceApplication hasPrefix:@"com.apple"];
+
+  if (!isFacebookURL && _performingLogIn) {
     [self handleImplicitCancelOfLogIn];
   }
+  _performingLogIn = NO;
 
-  if (isFacebookURL) {
+  if (isFacebookURL && isExpectedSourceApplication) {
     NSDictionary *urlParameters = [FBSDKLoginUtility queryParamsFromLoginURL:url];
     id<FBSDKLoginCompleting> completer = [[FBSDKLoginURLCompleter alloc] initWithURLParameters:urlParameters appID:[FBSDKSettings appID]];
 
@@ -606,30 +544,21 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
   return isFacebookURL;
 }
 
-- (BOOL)canOpenURL:(NSURL *)url
-    forApplication:(UIApplication *)application
- sourceApplication:(NSString *)sourceApplication
-        annotation:(id)annotation
-{
-  // verify the URL is intended as a callback for the SDK's log in
-  BOOL isFacebookURL = [[url scheme] hasPrefix:[NSString stringWithFormat:@"fb%@", [FBSDKSettings appID]]] &&
-  [[url host] isEqualToString:@"authorize"];
-
-  BOOL isExpectedSourceApplication = [sourceApplication hasPrefix:@"com.facebook"] || [sourceApplication hasPrefix:@"com.apple"] || [sourceApplication hasPrefix:@"com.burbn"];
-
-  return isFacebookURL && isExpectedSourceApplication;
-}
-
 - (void)applicationDidBecomeActive:(UIApplication *)application
 {
-  if ([self isPerformingLogin]) {
+  if (_performingLogIn) {
+    _performingLogIn = NO;
     [self handleImplicitCancelOfLogIn];
   }
 }
 
-- (BOOL)isAuthenticationURL:(NSURL *)url
-{
-  return [url.path hasSuffix:FBSDKOauthPath];
+- (void)handleImplicitCancelOfLogIn {
+  FBSDKLoginManagerLoginResult *result = [[FBSDKLoginManagerLoginResult alloc] initWithToken:nil
+                                                                                 isCancelled:YES
+                                                                          grantedPermissions:nil
+                                                                         declinedPermissions:nil];
+  [result addLoggingExtra:@(YES) forKey:@"implicit_cancel"];
+  [self invokeHandler:result error:nil];
 }
 
 @end
@@ -639,7 +568,7 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
 - (void)beginSystemLogIn
 {
   // First, we need to validate the current access token. The user may have uninstalled the
-  // app, changed their password, etc., or the access token may have expired, which
+  // app, changed their password, etc., or the acceess token may have expired, which
   // requires us to renew the account before asking for additional permissions.
   NSString *accessTokenString = [FBSDKSystemAccountStoreAdapter sharedInstance].accessTokenString;
   if (accessTokenString.length > 0) {
@@ -703,7 +632,7 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
       audience = nil;
   }
 
-  uint64_t timePriorToSystemAuthUI = [FBSDKInternalUtility currentTimeInMilliseconds];
+  unsigned long timePriorToSystemAuthUI = [FBSDKInternalUtility currentTimeInMilliseconds];
 
   // the FBSDKSystemAccountStoreAdapter completion handler maintains the strong reference during the the asynchronous operation
   [[FBSDKSystemAccountStoreAdapter sharedInstance]
@@ -817,7 +746,7 @@ typedef NS_ENUM(NSInteger, FBSDKLoginManagerState) {
                                                            [FBSDKInternalUtility bundleForStrings],
                                                            @"Log In",
                                                            @"Title of the web dialog that prompts the user to log in to Facebook.");
-  [FBSDKWebDialog showWithName:@"oauth" parameters:parameters delegate:self];
+  [FBSDKWebDialog showWithName:@"oauth" parameters:loginParams delegate:self];
 
   if (handler) {
     handler(YES, nil);
